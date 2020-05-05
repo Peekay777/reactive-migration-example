@@ -102,9 +102,6 @@ class ProductServiceImplTest {
     Product actualProduct = productService.updateProduct(productId, amendProduct);
 
     assertEquals(productId, actualProduct.getId());
-    assertEquals(expectedProduct.getDescription(), actualProduct.getDescription());
-    assertEquals(expectedProduct.getName(), actualProduct.getName());
-    assertEquals(expectedProduct.getPrice(), actualProduct.getPrice());
     verify(repository).existsById(anyString());
     verify(repository).save(any(Product.class));
   }
