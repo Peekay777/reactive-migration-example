@@ -131,19 +131,4 @@ public class ProductControllerTest {
     verify(productService).deleteProduct(anyString());
   }
 
-  @Test
-  void deleteProductTestGivenInvalidProductId() throws Exception {
-    String productId = "000001";
-    doThrow(new ProductNotFoundException(productId)).when(productService).deleteProduct(anyString());
-
-    MvcResult response = mockMvc.perform(delete("/products/{id}", productId)
-        .contentType(APPLICATION_JSON))
-        .andExpect(status().isNotFound())
-        .andReturn();
-    String actualResponseBody = response.getResponse().getContentAsString();
-
-    assertEquals("Could not find product 000001", actualResponseBody);
-    verify(productService).deleteProduct(anyString());
-  }
-
 }

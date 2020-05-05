@@ -15,7 +15,7 @@ public class ProductAdvice {
   @ExceptionHandler(ProductNotFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   public String productNotFoundHandler(ProductNotFoundException exception) {
-    log.error(exception.getMessage(), exception);
+    log.error(exception.getMessage());
     return exception.getMessage();
   }
 

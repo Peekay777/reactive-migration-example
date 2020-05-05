@@ -3,7 +3,6 @@ package com.koutsios.reactivemigrationexample.controller;
 import com.koutsios.reactivemigrationexample.domain.Product;
 import com.koutsios.reactivemigrationexample.dto.ProductDto;
 import com.koutsios.reactivemigrationexample.service.ProductService;
-import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
