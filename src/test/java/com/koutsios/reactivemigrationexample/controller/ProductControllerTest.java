@@ -25,16 +25,17 @@ import com.koutsios.reactivemigrationexample.service.ProductService;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@WebMvcTest(controllers = ProductController.class)
+@WebFluxTest(controllers = ProductController.class)
 public class ProductControllerTest {
 
   @Autowired
-  private MockMvc mockMvc;
+  private WebTestClient webTestClient;
   @Autowired
   private ObjectMapper objectMapper;
 
@@ -45,10 +46,13 @@ public class ProductControllerTest {
   void getAllProductsTest() throws Exception {
     when(productService.getAllProducts()).thenReturn(Arrays.asList(anApple(), aBanana()));
 
-    mockMvc.perform(get("/products/").contentType(APPLICATION_JSON))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isArray())
-        .andExpect(jsonPath("$", hasSize(2)));
+    webTestClient.get()
+        .uri("/products/")
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody()
+        .jsonPath("$").isArray()
+        .jsonPath("$").value(hasSize(2));
 
     verify(productService).getAllProducts();
   }
@@ -57,8 +61,10 @@ public class ProductControllerTest {
   void getProductTestGivenValidProductId() throws Exception {
     when(productService.getProduct(anyString())).thenReturn(anApple());
 
-    mockMvc.perform(get("/products/000001").contentType(APPLICATION_JSON))
-        .andExpect(status().isOk());
+    webTestClient.get()
+        .uri("/products/000001")
+        .exchange()
+        .expectStatus().isOk();
 
     verify(productService).getProduct(anyString());
   }
@@ -68,10 +74,13 @@ public class ProductControllerTest {
     String productId = "000001";
     when(productService.getProduct(anyString())).thenThrow(new ProductNotFoundException(productId));
 
-    MvcResult response = mockMvc.perform(get("/products/{id}", productId).contentType(APPLICATION_JSON))
-        .andExpect(status().isNotFound())
-        .andReturn();
-    String actualResponseBody = response.getResponse().getContentAsString();
+    String actualResponseBody = webTestClient.get()
+        .uri("/products/{id}", productId)
+        .exchange()
+        .expectStatus().isNotFound()
+        .returnResult(String.class)
+        .getResponseBody()
+        .blockLast();
 
     assertEquals("Could not find product 000001", actualResponseBody);
     verify(productService).getProduct(anyString());
@@ -82,10 +91,12 @@ public class ProductControllerTest {
     ProductDto newProduct = aProductDto();
     when(productService.createProduct(any(ProductDto.class))).thenReturn(anApple());
 
-    mockMvc.perform(post("/products")
+    webTestClient.post()
+        .uri("/products")
         .contentType(APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(newProduct)))
-        .andExpect(status().isOk());
+        .bodyValue(newProduct)
+        .exchange()
+        .expectStatus().isOk();
 
     verify(productService).createProduct(any(ProductDto.class));
   }
@@ -93,13 +104,15 @@ public class ProductControllerTest {
   @Test
   void updateProductTestGivenValidProductId() throws Exception {
     String productId = "000001";
-    ProductDto newProduct = aProductDto();
+    ProductDto amendProduct = aProductDto();
     when(productService.updateProduct(anyString(), any(ProductDto.class))).thenReturn(anApple());
 
-    mockMvc.perform(put("/products/{id}", productId)
+    webTestClient.put()
+        .uri("/products/{id}", productId)
         .contentType(APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(newProduct)))
-        .andExpect(status().isOk());
+        .bodyValue(amendProduct)
+        .exchange()
+        .expectStatus().isOk();
 
     verify(productService).updateProduct(anyString(), any(ProductDto.class));
   }
@@ -107,15 +120,18 @@ public class ProductControllerTest {
   @Test
   void updateProductTestGivenInvalidProductId() throws Exception {
     String productId = "000001";
-    ProductDto newProduct = aProductDto();
+    ProductDto amendProduct = aProductDto();
     when(productService.updateProduct(anyString(), any(ProductDto.class))).thenThrow(new ProductNotFoundException(productId));
 
-    MvcResult response = mockMvc.perform(put("/products/{id}", productId)
+    String actualResponseBody = webTestClient.put()
+        .uri("/products/{id}", productId)
         .contentType(APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(newProduct)))
-        .andExpect(status().isNotFound())
-        .andReturn();
-    String actualResponseBody = response.getResponse().getContentAsString();
+        .bodyValue(amendProduct)
+        .exchange()
+        .expectStatus().isNotFound()
+        .returnResult(String.class)
+        .getResponseBody()
+        .blockLast();
 
     assertEquals("Could not find product 000001", actualResponseBody);
     verify(productService).updateProduct(anyString(), any(ProductDto.class));
@@ -124,9 +140,11 @@ public class ProductControllerTest {
   @Test
   void deleteProductTestGivenValidProductId() throws Exception {
     String productId = "000001";
-    mockMvc.perform(delete("/products/{id}", productId)
-        .contentType(APPLICATION_JSON))
-        .andExpect(status().isOk());
+
+    webTestClient.delete()
+        .uri("/products/{id}", productId)
+        .exchange()
+        .expectStatus().isOk();
 
     verify(productService).deleteProduct(anyString());
   }
