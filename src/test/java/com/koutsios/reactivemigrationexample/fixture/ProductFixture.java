@@ -2,6 +2,7 @@ package com.koutsios.reactivemigrationexample.fixture;
 
 import com.koutsios.reactivemigrationexample.domain.Product;
 import com.koutsios.reactivemigrationexample.dto.ProductDto;
+import reactor.core.publisher.Mono;
 
 public class ProductFixture {
 

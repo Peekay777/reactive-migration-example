@@ -1,14 +1,17 @@
 package com.koutsios.reactivemigrationexample.service.impl;
 
+import static java.lang.Boolean.FALSE;
+
 import com.googlecode.jmapper.JMapper;
 import com.koutsios.reactivemigrationexample.domain.Product;
 import com.koutsios.reactivemigrationexample.dto.ProductDto;
 import com.koutsios.reactivemigrationexample.exception.ProductNotFoundException;
 import com.koutsios.reactivemigrationexample.repository.ProductRepository;
 import com.koutsios.reactivemigrationexample.service.ProductService;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -20,34 +23,40 @@ public class ProductServiceImpl implements ProductService {
       ProductDto.class);
 
   @Override
-  public Product getProduct(String id) {
+  public Mono<Product> getProduct(String id) {
     return repository.findById(id)
-        .orElseThrow(() -> new ProductNotFoundException(id));
+        .switchIfEmpty(Mono.error(new ProductNotFoundException(id)));
   }
 
   @Override
-  public List<Product> getAllProducts() {
+  public Flux<Product> getAllProducts() {
     return repository.findAll();
   }
 
   @Override
-  public Product createProduct(ProductDto newProduct) {
+  public Mono<Product> createProduct(ProductDto newProduct) {
     return repository.save(productMapper.getDestination(newProduct));
   }
 
   @Override
-  public Product updateProduct(String id, ProductDto amendedProduct) {
-    if (repository.existsById(id)) {
-      Product updatedProduct = productMapper.getDestination(amendedProduct);
-      updatedProduct.setId(id);
-      return repository.save(updatedProduct);
-    }
-    throw new ProductNotFoundException(id);
+  public Mono<Product> updateProduct(String id, ProductDto amendedProduct) {
+    return repository.existsById(id)
+        .map(productExists -> {
+          if (FALSE.equals(productExists)) {
+            throw new ProductNotFoundException(id);
+          }
+          return productExists;
+        })
+        .then(Mono.just(productMapper.getDestination(amendedProduct)))
+        .flatMap(updatedProduct -> {
+          updatedProduct.setId(id);
+          return repository.save(updatedProduct);
+        });
   }
 
   @Override
-  public void deleteProduct(String id) {
-    repository.deleteById(id);
+  public Mono<Void> deleteProduct(String id) {
+    return repository.deleteById(id);
   }
 
 }

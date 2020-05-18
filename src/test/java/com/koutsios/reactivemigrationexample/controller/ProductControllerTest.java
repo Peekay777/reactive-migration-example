@@ -7,18 +7,13 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static reactor.core.publisher.Flux.fromIterable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.koutsios.reactivemigrationexample.domain.Product;
 import com.koutsios.reactivemigrationexample.dto.ProductDto;
 import com.koutsios.reactivemigrationexample.exception.ProductNotFoundException;
 import com.koutsios.reactivemigrationexample.service.ProductService;
@@ -27,9 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @WebFluxTest(controllers = ProductController.class)
 public class ProductControllerTest {
@@ -44,22 +40,21 @@ public class ProductControllerTest {
 
   @Test
   void getAllProductsTest() throws Exception {
-    when(productService.getAllProducts()).thenReturn(Arrays.asList(anApple(), aBanana()));
+    when(productService.getAllProducts()).thenReturn(Flux.fromIterable(Arrays.asList(anApple(), aBanana())));
 
     webTestClient.get()
         .uri("/products/")
         .exchange()
         .expectStatus().isOk()
-        .expectBody()
-        .jsonPath("$").isArray()
-        .jsonPath("$").value(hasSize(2));
+        .expectBodyList(new ParameterizedTypeReference<Product>() {})
+        .hasSize(2);
 
     verify(productService).getAllProducts();
   }
 
   @Test
   void getProductTestGivenValidProductId() throws Exception {
-    when(productService.getProduct(anyString())).thenReturn(anApple());
+    when(productService.getProduct(anyString())).thenReturn(Mono.just(anApple()));
 
     webTestClient.get()
         .uri("/products/000001")
@@ -89,7 +84,7 @@ public class ProductControllerTest {
   @Test
   void createProductTest() throws Exception {
     ProductDto newProduct = aProductDto();
-    when(productService.createProduct(any(ProductDto.class))).thenReturn(anApple());
+    when(productService.createProduct(any(ProductDto.class))).thenReturn(Mono.just(anApple()));
 
     webTestClient.post()
         .uri("/products")
@@ -105,7 +100,7 @@ public class ProductControllerTest {
   void updateProductTestGivenValidProductId() throws Exception {
     String productId = "000001";
     ProductDto amendProduct = aProductDto();
-    when(productService.updateProduct(anyString(), any(ProductDto.class))).thenReturn(anApple());
+    when(productService.updateProduct(anyString(), any(ProductDto.class))).thenReturn(Mono.just(anApple()));
 
     webTestClient.put()
         .uri("/products/{id}", productId)

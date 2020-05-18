@@ -2,18 +2,19 @@ package com.koutsios.reactivemigrationexample.service;
 
 import com.koutsios.reactivemigrationexample.domain.Product;
 import com.koutsios.reactivemigrationexample.dto.ProductDto;
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public interface ProductService {
 
-  Product getProduct(String id);
+  Mono<Product> getProduct(String id);
 
-  List<Product> getAllProducts();
+  Flux<Product> getAllProducts();
 
-  Product createProduct(ProductDto newProduct);
+  Mono<Product> createProduct(ProductDto newProduct);
 
-  Product updateProduct(String id, ProductDto amendedProduct);
+  Mono<Product> updateProduct(String id, ProductDto amendedProduct);
 
-  void deleteProduct(String id);
+  Mono<Void> deleteProduct(String id);
 
 }

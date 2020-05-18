@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -30,6 +31,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -45,9 +48,9 @@ class ProductServiceImplTest {
   void getProductTestGivenValidId() {
     String productId = "000001";
     Product expectedProduct = anApple();
-    when(repository.findById(anyString())).thenReturn(Optional.of(expectedProduct));
+    when(repository.findById(anyString())).thenReturn(Mono.just(expectedProduct));
 
-    Product actualProduct = productService.getProduct(productId);
+    Product actualProduct = productService.getProduct(productId).block();
 
     assertNotNull(actualProduct);
     assertSame(expectedProduct, actualProduct);
@@ -57,19 +60,19 @@ class ProductServiceImplTest {
   @Test()
   void getProductTestGivenInvalidId() {
     String productId = "000001";
-    when(repository.findById(anyString())).thenReturn(Optional.empty());
+    when(repository.findById(anyString())).thenReturn(Mono.empty());
 
-    assertThrows(ProductNotFoundException.class, () -> productService.getProduct(productId));
+    assertThrows(ProductNotFoundException.class, () -> productService.getProduct(productId).block());
     verify(repository).findById(anyString());
   }
 
   @Test
   void getAllProductTest() {
-    List<Product> expectedProducts = Arrays.asList(anApple(), aBanana());
-    when(repository.findAll()).thenReturn(expectedProducts);
+    when(repository.findAll()).thenReturn(Flux.fromIterable(Arrays.asList(anApple(), aBanana())));
 
-    List<Product> actualProducts = productService.getAllProducts();
+    List<Product> actualProducts = productService.getAllProducts().collectList().block();
 
+    assertNotNull(actualProducts);
     assertEquals(2, actualProducts.size());
     verify(repository).findAll();
   }
@@ -77,10 +80,11 @@ class ProductServiceImplTest {
   @Test
   void createProductTest() {
     ProductDto appleDto = aProductDto();
-    when(repository.save(any(Product.class))).thenReturn(anApple());
+    when(repository.save(any(Product.class))).thenReturn(Mono.just(anApple()));
 
-    Product actualProduct = productService.createProduct(appleDto);
+    Product actualProduct = productService.createProduct(appleDto).block();
 
+    assertNotNull(actualProduct);
     assertNotNull(actualProduct.getId());
     assertEquals(appleDto.getName(), actualProduct.getName());
     assertEquals(appleDto.getDescription(), actualProduct.getDescription());
@@ -96,11 +100,12 @@ class ProductServiceImplTest {
     ProductDto amendProduct = ProductDto.builder()
         .price(5.00)
         .build();
-    when(repository.existsById(anyString())).thenReturn(true);
-    when(repository.save(any(Product.class))).thenReturn(expectedProduct);
+    when(repository.existsById(anyString())).thenReturn(Mono.just(Boolean.TRUE));
+    when(repository.save(any(Product.class))).thenReturn(Mono.just(expectedProduct));
 
-    Product actualProduct = productService.updateProduct(productId, amendProduct);
+    Product actualProduct = productService.updateProduct(productId, amendProduct).block();
 
+    assertNotNull(actualProduct);
     assertEquals(productId, actualProduct.getId());
     verify(repository).existsById(anyString());
     verify(repository).save(any(Product.class));
@@ -112,9 +117,9 @@ class ProductServiceImplTest {
     ProductDto amendProduct = ProductDto.builder()
         .price(5.00)
         .build();
-    when(repository.existsById(anyString())).thenReturn(false);
+    when(repository.existsById(anyString())).thenReturn(Mono.just(Boolean.FALSE));
 
-    assertThrows(ProductNotFoundException.class, () -> productService.updateProduct(productId, amendProduct));
+    assertThrows(ProductNotFoundException.class, () -> productService.updateProduct(productId, amendProduct).block());
     verify(repository).existsById(anyString());
     verify(repository, never()).save(any(Product.class));
   }
@@ -122,7 +127,7 @@ class ProductServiceImplTest {
   @Test
   void deleteProduct() {
     String productId = "000001";
-    doNothing().when(repository).deleteById(anyString());
+    when(repository.deleteById(anyString())).thenReturn(Mono.empty());
 
     productService.deleteProduct(productId);
 
